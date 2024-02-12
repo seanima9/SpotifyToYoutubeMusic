@@ -1,0 +1,6 @@
+personal_projs/
+.ipynb_checkpoints/
+*.pyc
+.DS_Store
+.vscode/
+.env
