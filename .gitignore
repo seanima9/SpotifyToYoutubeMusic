@@ -5,3 +5,4 @@ personal_projs/
 .vscode/
 .env
 client_secret.json
+playlist_ids.txt

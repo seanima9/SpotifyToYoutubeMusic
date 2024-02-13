@@ -8,6 +8,11 @@ load_dotenv()
 client_id = os.getenv('SPOTIFY_CLIENT_ID')
 client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 
+with open('/home/seanimani/personal_projs/playlist_conv/playlist_ids.txt', 'r') as file:
+    playlist_ids = file.readlines()
+
+spotify_playlist_id = playlist_ids[0].strip()
+
 def get_access_token(client_id, client_secret):
     '''
     Obtain an access token for authenticating requests to the Spotify API.
@@ -52,8 +57,8 @@ def spotify_track_lister():
     '''
     Get the tracks from a Spotify playlist and return a list of tuples containing the track name and a list of artists.
     '''
-    my_playlist_id = '07icheaqv3vqfxPVzHQnwv'  # From '07icheaqv3vqfxPVzHQnwv?si=7233260e6a034fb9', 3333
-
+    my_playlist_id = spotify_playlist_id
+    
     access_token = get_access_token(client_id, client_secret)
     tracks = get_playlist_tracks(my_playlist_id, access_token)
 

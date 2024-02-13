@@ -11,6 +11,11 @@ import spotify_api
 load_dotenv()
 client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
 
+with open('/home/seanimani/personal_projs/playlist_conv/playlist_ids.txt', 'r') as file:
+    playlist_ids = file.readlines()
+
+youtube_playlist_id = playlist_ids[1].strip()
+
 def get_authenticated_service():
     '''
     Get authenticated service for YouTube API
@@ -117,7 +122,8 @@ def song_adder(youtube):
     Returns:
     None
     '''
-    playlist_id = 'PLLa4kakNIOc6MG7wtPmQuAw4n_bHmkp-T'
+    playlist_id = youtube_playlist_id
+    
     tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
     possible_tries = 3
 
