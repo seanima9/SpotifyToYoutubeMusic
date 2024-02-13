@@ -60,17 +60,20 @@ def get_playlist_tracks(playlist_id, access_token):
     return tracks
 
 
-def main():
+def spotify_main():
     my_playlist_id = '07icheaqv3vqfxPVzHQnwv?si=7233260e6a034fb9'
+
     access_token = get_access_token(client_id, client_secret)
     tracks = get_playlist_tracks(my_playlist_id, access_token)
 
-    for track in tracks[:10]:  # TODO: Remove slice after testing
+    track_list = []
+    for track in tracks:
         track_name = track['track']['name']
         artist_names = [artist['name'] for artist in track['track']['artists']]
-        print(track_name, artist_names)
+        track_list.append((track_name, artist_names))
         # print(f"Track Name: {track_name}, Artist(s): {', '.join(artist_names)}")
+    return track_list
 
 
 if __name__ == '__main__':
-    main()
+    spotify_main()
