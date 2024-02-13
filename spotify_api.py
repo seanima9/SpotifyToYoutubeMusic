@@ -61,9 +61,8 @@ def spotify_track_lister():
     for item in tracks:
         track = item['track']
         track_name = track['name']
-        artist_names = [artist['name'] for artist in track['artists']]
+        artist_names = track['artists'][0]['name']
         track_list.append((track_name, artist_names))
-
     return track_list
 
 

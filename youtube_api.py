@@ -111,10 +111,10 @@ def song_adder(youtube):
     '''
     playlist_id = 'PLLa4kakNIOc6MG7wtPmQuAw4n_bHmkp-T'
     existing_video_ids = yt_music_vid_ids(youtube, playlist_id)
-    tracks = spotify_api.spotify_track_lister()
+    tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
 
     for song, artist in tracks:
-        video_id = search_song(song, artist[0])
+        video_id = search_song(youtube, song, artist)
 
         if not video_id:
             print(f"Could not find YouTube video for {song} by {artist}")
@@ -126,7 +126,7 @@ def song_adder(youtube):
 
         add_song_to_playlist(youtube, playlist_id, video_id)
         print(f"Added {song} by {artist} to the playlist.")
-        time.sleep(0.05)
+        time.sleep(0.5)
 
 
 def main():
