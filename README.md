@@ -45,24 +45,12 @@ YOUTUBE_CLIENT_SECRETS=path/to/your/downloaded/client_secret.json
 
 ### Set Spotify Playlist ID and YouTube Playlist ID:
 
-
-Can change them directly in the code:
-
-In spotify_api.py, set your Spotify playlist ID you want to copy tracks from. Variable is called 'my_playlist_id'
-In youtube_api.py, set the YouTube playlist ID where you want to add songs. Variable is called 'playlist_id'
-
-OR can just add them to playlist_ids.txt:
-
-By adding Spotiy playlist id to line 1 and YouTube playlist id to line 2 e.g.
-
-347r8fh4389r3
-
-f9843urjf98eur94830
-
+Add them to playlist_ids.txt, adding spotify id to line one and youtube music id to line 2
 
 Run the Application:
 
-run youtube_api.py in your venv, make sure you are in the right dir when doing this
+Activate your venv, then run the program with 'python youtube_api.py'.
+Make sure you are in the right dir when doing this
 Follow the on-screen instructions to authenticate with YouTube on your first run.
 
 Be aware of the API quota limits set by Google and Spotify.
