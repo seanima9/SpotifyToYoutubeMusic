@@ -39,16 +39,17 @@ YOUTUBE_CLIENT_SECRETS=path/to/your/downloaded/client_secret.json
 Set Spotify Playlist ID and YouTube Playlist ID:
 
 In spotify_api.py, set your Spotify playlist ID you want to copy tracks from.
-In the song_adder function within main.py, set the YouTube playlist ID where you want to add songs.
+In the song_adder function within youtube_api.py, set the YouTube playlist ID where you want to add songs.
 
 Run the Application:
 
-python main.py
+python youtube_api.py
 Follow the on-screen instructions to authenticate with YouTube on your first run.
 Synchronization:
 
 The script will list tracks from the specified Spotify playlist and add them to the specified YouTube playlist, avoiding duplicates.
-Be aware of the API quota limits set by Google and Spotify. Extensive use of the APIs may require you to request quota increases.
+Be aware of the API quota limits set by Google and Spotify.
+Extensive use of the APIs will cause a quota timeout, you can rerun program again at 00:00 Tuesday, Pacific Time (PT) since the quota will have reset.
 
 ## Contributing
 

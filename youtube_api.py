@@ -3,6 +3,7 @@ import time
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.errors import HttpError
 import spotify_api
 
 
@@ -19,6 +20,11 @@ def get_authenticated_service():
     '''
     scopes = ['https://www.googleapis.com/auth/youtube.force-ssl']
     flow = InstalledAppFlow.from_client_secrets_file(client_secrets_json, scopes)
+    print()
+    print('-' * 50)
+    print("Starting local server for authentication...")
+    print('-' * 50)
+    print()
     credentials = flow.run_local_server(port=0)
 
     return build('youtube', 'v3', credentials=credentials)
@@ -101,7 +107,9 @@ def yt_music_vid_ids(youtube, playlist_id):
 
 def song_adder(youtube):
     '''
-    Add songs from Spotify to a YouTube playlist, does not add songs that are already in the playlist
+    Add songs to a YouTube playlist
+    Will not add songs that are already in the playlist or songs that could not be found on YouTube
+    Will retry adding a song up to 'possible_tries' times if it fails
 
     Args:
     youtube (Resource): The authenticated YouTube API client
@@ -110,28 +118,66 @@ def song_adder(youtube):
     None
     '''
     playlist_id = 'PLLa4kakNIOc6MG7wtPmQuAw4n_bHmkp-T'
-    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)
     tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
+    possible_tries = 3
+
+    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)
 
     for song, artist in tracks:
         video_id = search_song(youtube, song, artist)
-
+        
         if not video_id:
             print(f"Could not find YouTube video for {song} by {artist}")
-            continue  # Skip to the next iteration if no video ID was found
+            continue  # Move on to next song
 
         if video_id in existing_video_ids:
             print(f"{song} by {artist} is already in the playlist.")
-            continue
+            continue  # Move on to next song
+        
 
-        add_song_to_playlist(youtube, playlist_id, video_id)
-        print(f"Added {song} by {artist} to the playlist.")
-        time.sleep(0.5)
+        for attempt in range(possible_tries):  # Try adding the song up to 'possible_tries' times
+            try:
+                add_song_to_playlist(youtube, playlist_id, video_id)
+                print(f"Added {song} by {artist} to the playlist.")
+                break  # If successful, break out of the for attempt loop
+
+            except Exception as e:
+                print(f"Failed to add {song} by {artist} to the playlist. On attempt {attempt + 1} of {possible_tries}")
+                print('-' * 50)
+                print(f"Error message: {e}")
+                print('-' * 50)
+
+                if attempt < possible_tries - 1:
+                    sleep_time = 4 * (attempt + 1)
+                    print(f"Retrying in {sleep_time} seconds...")
+                    print()
+                    time.sleep(sleep_time)  # Wait before trying again
+                else:
+                    print("Failed to add song to playlist. Please try again later.")
+                    return  # Stop the program
 
 
 def main():
-    youtube = get_authenticated_service()
-    song_adder(youtube)
+    try:
+        youtube = get_authenticated_service()
+    except Exception as e:
+        print(f"An error occurred during authentication: {e}")
+        return
+    
+    print()
+    print('-' * 50)
+    print("Authentication successful.")
+    print('-' * 50)
+    print()
+
+    try:
+        song_adder(youtube)
+
+    except Exception as e:
+        if 'quota' in str(e):
+            print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
+        else:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == '__main__':
