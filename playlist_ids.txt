@@ -1,0 +1,2 @@
+spotify-playlist-id-here
+youtube-playlist-id-here
