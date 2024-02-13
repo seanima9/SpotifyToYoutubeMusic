@@ -8,7 +8,10 @@ load_dotenv()
 client_id = os.getenv('SPOTIFY_CLIENT_ID')
 client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 
-with open('/home/seanimani/personal_projs/playlist_conv/playlist_ids.txt', 'r') as file:
+current_working_directory = os.getcwd()
+file_name = 'playlist_ids.txt'
+full_file_path = os.path.join(current_working_directory, file_name)
+with open(full_file_path, 'r') as file:
     playlist_ids = file.readlines()
 
 spotify_playlist_id = playlist_ids[0].strip()

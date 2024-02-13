@@ -11,7 +11,7 @@ import spotify_api
 load_dotenv()
 client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
 
-with open('/home/seanimani/personal_projs/playlist_conv/playlist_ids.txt', 'r') as file:
+with open(spotify_api.full_file_path, 'r') as file:
     playlist_ids = file.readlines()
 
 youtube_playlist_id = playlist_ids[1].strip()

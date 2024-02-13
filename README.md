@@ -62,7 +62,7 @@ f9843urjf98eur94830
 
 Run the Application:
 
-run youtube_api.py in your venv
+run youtube_api.py in your venv, make sure you are in the right dir when doing this
 Follow the on-screen instructions to authenticate with YouTube on your first run.
 
 Be aware of the API quota limits set by Google and Spotify.
