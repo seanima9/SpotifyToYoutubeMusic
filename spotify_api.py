@@ -8,13 +8,13 @@ load_dotenv()
 client_id = os.getenv('SPOTIFY_CLIENT_ID')
 client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 
-current_working_directory = os.getcwd()
-file_name = 'playlist_ids.txt'
-full_file_path = os.path.join(current_working_directory, file_name)
+script_dir = os.path.dirname(__file__)
+full_file_path = os.path.join(script_dir, 'playlist_ids.txt')
 with open(full_file_path, 'r') as file:
     playlist_ids = file.readlines()
 
 spotify_playlist_id = playlist_ids[0].strip()
+youtube_playlist_id = playlist_ids[1].strip()
 
 def get_access_token(client_id, client_secret):
     '''
