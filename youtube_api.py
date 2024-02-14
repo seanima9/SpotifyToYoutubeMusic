@@ -104,17 +104,19 @@ def add_song_to_playlist(youtube, playlist_id, video_id):
 
 def yt_music_vid_ids(youtube, playlist_id):
     """
-    Fetch all video IDs in a given YouTube playlist
-    Costs 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
+    Fetch all video IDs in a given YouTube playlist and return a dictionary mapping song and artist pairs to video IDs
+    e.g. {'song - artist': '2SUwOgmvzK4', ...}
+    costs 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
+    we are assuming video titles have the song and artist in them
 
     Args:
     youtube (Resource): The authenticated YouTube API client
     playlist_id (str): The ID of the YouTube playlist
 
     Returns:
-    set: A set of video IDs in the youtube music playlist currently
+    dict: A dictionary mapping song and artist pairs to video IDs in the youtube music playlist currently
     """
-    existing_video_ids = set()
+    existing_video_ids = {}
     next_page_token = None
 
     while True:
@@ -123,12 +125,15 @@ def yt_music_vid_ids(youtube, playlist_id):
             playlistId=playlist_id,
             maxResults=50,  # Maximum number of results to return per page, can be between 1 and 50, cost is 1 unit per page
             pageToken=next_page_token,  
-            fields="nextPageToken,items(snippet/resourceId/videoId)"
+            fields="nextPageToken,items(snippet/title,snippet/resourceId/videoId)"
         )
-        response = request.execute()  
+        response = request.execute()
+        # response is a dictionary looking like {'nextPageToken': '...', 'items': [{'snippet': {'resourceId': {'videoId': '...'}}}, ...]}
 
-        for item in response.get('items', []):
-            existing_video_ids.add(item['snippet']['resourceId']['videoId'])
+        for item in response.get('items', []):  # returns value of 'items' key if it exists, else returns an empty list
+            video_title = item['snippet']['title']  # Will give the youtube video title
+            video_id = item['snippet']['resourceId']['videoId']
+            existing_video_ids[video_title] = video_id 
         next_page_token = response.get('nextPageToken')  
 
         if not next_page_token:  # If there are no more pages
@@ -141,6 +146,7 @@ def song_adder(youtube):
     '''
     Add songs to a YouTube playlist
     Will not add songs that are already in the playlist or songs that could not be found on YouTube
+    This will give false positives if their are 2 songs with the same name by different artists (not very common, but possible)
     Will retry adding a song up to 'possible_tries' times if it fails
 
     Costs per request for each function used in this function:
@@ -154,28 +160,32 @@ def song_adder(youtube):
     Returns:
     None
     '''
-    playlist_id = spotify_api.youtube_playlist_id
+    playlist_id = spotify_api.youtube_playlist_id  # The ID of the YouTube playlist
     
     tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
     possible_tries = 3
 
-    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)
+    # A dictionary mapping song and artist pairs to video IDs in the youtube music playlist currently
+    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)  # 1 unit per 50 videos
 
     for song, artist in tracks:
-        video_id = search_song(youtube, song, artist)
+        # generator expression to check if the song is in any of the keys (video titles) in the dictionary (existing_video_ids)
+        # TODO this will give false positives if their are 2 songs with the same name by different artists, see if we can fix this
+        # cannot just check for artist in key because the video title may not have the artist in it
+        if any(song in key for key in existing_video_ids):
+            print(f"{song}  is already in the playlist.")
+            continue  # Move on to next song
         
+        video_id = search_song(youtube, song, artist)  # 100 units per request
+
         if not video_id:
             print(f"Could not find YouTube video for {song} by {artist}")
-            continue  # Move on to next song
-
-        if video_id in existing_video_ids:
-            print(f"{song} by {artist} is already in the playlist.")
             continue  # Move on to next song
         
 
         for attempt in range(possible_tries):  # Try adding the song up to 'possible_tries' times
             try:
-                add_song_to_playlist(youtube, playlist_id, video_id)
+                add_song_to_playlist(youtube, playlist_id, video_id)  # 50 units per request
                 print(f"Added {song} by {artist} to the playlist.")
                 break  # If successful, break out of the for attempt loop
 
