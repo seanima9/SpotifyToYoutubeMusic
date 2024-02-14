@@ -1,9 +1,10 @@
 import os
 import time
+import pickle
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
 import spotify_api
 
 
@@ -14,25 +15,52 @@ client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
 def get_authenticated_service():
     '''
     Get authenticated service for YouTube API
+    Stores the user's access and refresh tokens in a file called 'token.pickle'
+    File is created automatically when the authorization flow completes for the first time
 
     Returns:
     youtube (googleapiclient.discovery.Resource): Authenticated service for YouTube API
     '''
     scopes = ['https://www.googleapis.com/auth/youtube.force-ssl']
-    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_json, scopes)
-    print()
-    print('-' * 50)
-    print("Starting local server for authentication...")
-    print('-' * 50)
-    print()
-    credentials = flow.run_local_server(port=0)
+    creds = None
 
-    return build('youtube', 'v3', credentials=credentials)
+    full_file_path = os.path.join(spotify_api.script_dir, 'token.pickle')
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first time.
+
+    if os.path.exists(full_file_path):
+        with open(full_file_path, 'rb') as token:
+            creds = pickle.load(token)
+            print()
+            print("Loaded credentials from token.pickle")
+
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())  # Refresh the token, no need to ask for permission again
+
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(client_secrets_json, scopes)
+            print()
+            print('-' * 50)
+            print("Starting local server for authentication...")
+            print('-' * 50)
+            print()
+            creds = flow.run_local_server(port=0)  # Open a web browser to authenticate the user
+
+        # Save the credentials for the next run
+        with open(full_file_path, 'wb') as token:
+            pickle.dump(creds, token)
+            print()
+            print("Saved credentials to token.pickle")
+
+    return build('youtube', 'v3', credentials=creds)
 
 
 def search_song(youtube, song_name, artist):
     '''
     Get YouTube video ID for a song using name and artist
+    Costs 100 units per request, so maxResults=1 costs 100 units
 
     Args:
     youtube (Resource): The authenticated YouTube API client
@@ -57,6 +85,9 @@ def search_song(youtube, song_name, artist):
 
 
 def add_song_to_playlist(youtube, playlist_id, video_id):
+    '''
+    Add a song to a YouTube playlist, costs 50 units per request
+    '''
     youtube.playlistItems().insert(
         part="snippet",  # Part of the API to use
         body={
@@ -74,6 +105,7 @@ def add_song_to_playlist(youtube, playlist_id, video_id):
 def yt_music_vid_ids(youtube, playlist_id):
     """
     Fetch all video IDs in a given YouTube playlist
+    Costs 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
 
     Args:
     youtube (Resource): The authenticated YouTube API client
@@ -89,7 +121,7 @@ def yt_music_vid_ids(youtube, playlist_id):
         request = youtube.playlistItems().list(
             part="snippet",
             playlistId=playlist_id,
-            maxResults=50,  # Maximum number of results to return per page
+            maxResults=50,  # Maximum number of results to return per page, can be between 1 and 50, cost is 1 unit per page
             pageToken=next_page_token,  
             fields="nextPageToken,items(snippet/resourceId/videoId)"
         )
@@ -110,6 +142,11 @@ def song_adder(youtube):
     Add songs to a YouTube playlist
     Will not add songs that are already in the playlist or songs that could not be found on YouTube
     Will retry adding a song up to 'possible_tries' times if it fails
+
+    Costs per request for each function used in this function:
+    - search_song: 100 units per request, so maxResults=1 costs 100 units
+    - add_song_to_playlist: 50 units per request
+    - yt_music_vid_ids: 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
 
     Args:
     youtube (Resource): The authenticated YouTube API client
