@@ -1,6 +1,7 @@
 import os
 import time
 import pickle
+import re
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -41,11 +42,9 @@ def get_authenticated_service():
 
         else:
             flow = InstalledAppFlow.from_client_secrets_file(client_secrets_json, scopes)
-            print()
-            print('-' * 50)
+            print('\n' +'-' * 50 )
             print("Starting local server for authentication...")
-            print('-' * 50)
-            print()
+            print('-' * 50 + '\n')
             creds = flow.run_local_server(port=0)  # Open a web browser to authenticate the user
 
         # Save the credentials for the next run
@@ -145,8 +144,8 @@ def yt_music_vid_ids(youtube, playlist_id):
 def song_adder(youtube):
     '''
     Add songs to a YouTube playlist
-    Will not add songs that are already in the playlist or songs that could not be found on YouTube
-    This will give false positives if their are 2 songs with the same name by different artists (not very common, but possible)
+    Will not add songs that are already in the playlist, songs that could not be found on YouTube
+    or songs that have the same name but different artists
     Will retry adding a song up to 'possible_tries' times if it fails
 
     Costs per request for each function used in this function:
@@ -169,10 +168,9 @@ def song_adder(youtube):
     existing_video_ids = yt_music_vid_ids(youtube, playlist_id)  # 1 unit per 50 videos
 
     for song, artist in tracks:
-        # generator expression to check if the song is in any of the keys (video titles) in the dictionary (existing_video_ids)
-        # TODO this will give false positives if their are 2 songs with the same name by different artists, see if we can fix this
-        # cannot just check for artist in key because the video title may not have the artist in it
-        if any(song in key for key in existing_video_ids):
+        # Remove special characters and convert to lowercase
+        song_processed = re.sub(r"[.,!?\-_/ ()'\"]", "", song).lower()
+        if any(song_processed in re.sub(r"[.,!?\-_/ ()'\"]", "", key).lower() for key in existing_video_ids):
             print(f"{song}  is already in the playlist.")
             continue  # Move on to next song
         
@@ -212,11 +210,9 @@ def main():
         print(f"An error occurred during authentication: {e}")
         return
     
-    print()
-    print('-' * 50)
+    print("\n" + "-" * 50)
     print("Authentication successful.")
-    print('-' * 50)
-    print()
+    print('-' * 50 + "\n")
 
     try:
         song_adder(youtube)
