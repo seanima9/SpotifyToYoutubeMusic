@@ -7,11 +7,32 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import spotify_api
-
+import log_test
 
 # Load environment variables
 load_dotenv()
 client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
+
+
+def normalize_title(title):
+    '''
+    Normalizes the title by removing keywords and punctuation.
+    The title is converted to lowercase and returned.
+
+    Args:
+    title (str): The title to be normalized
+
+    Returns:
+    str: The normalized title
+    '''
+    keywords_pattern = r"\s*(feat\.?|fts\.?|ft\.?|featuring|with)\s*"
+    punctuation_pattern = r"[.,$&!?’|@:\-_/ ()'\"]"
+
+    step1 = re.sub(keywords_pattern, "", str(title), flags=re.IGNORECASE)
+    step2 = re.sub(punctuation_pattern, "", step1, flags=re.IGNORECASE)
+
+    return step2.lower()
+
 
 def get_authenticated_service():
     '''
@@ -160,27 +181,23 @@ def song_adder(youtube):
     None
     '''
     playlist_id = spotify_api.youtube_playlist_id  # The ID of the YouTube playlist
-    
     tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
     possible_tries = 3
-
     # A dictionary mapping song and artist pairs to video IDs in the youtube music playlist currently
     existing_video_ids = yt_music_vid_ids(youtube, playlist_id)  # 1 unit per 50 videos
 
     for song, artist in tracks:
         # Remove special characters and convert to lowercase
-        song_processed = re.sub(r"[.,!?\-_/ ()'\"]", "", song).lower()
-        if any(song_processed in re.sub(r"[.,!?\-_/ ()'\"]", "", key).lower() for key in existing_video_ids):
+        song_processed = normalize_title(song)
+        if any(song_processed in normalize_title(key) for key in existing_video_ids):
             print(f"{song}  is already in the playlist.")
             continue  # Move on to next song
         
         video_id = search_song(youtube, song, artist)  # 100 units per request
-
         if not video_id:
             print(f"Could not find YouTube video for {song} by {artist}")
             continue  # Move on to next song
         
-
         for attempt in range(possible_tries):  # Try adding the song up to 'possible_tries' times
             try:
                 add_song_to_playlist(youtube, playlist_id, video_id)  # 50 units per request

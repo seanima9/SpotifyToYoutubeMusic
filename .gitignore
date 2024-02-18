@@ -6,3 +6,4 @@ personal_projs/
 .env
 client_secret.json
 token.pickle
+song_log.json

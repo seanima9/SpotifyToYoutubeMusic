@@ -5,62 +5,96 @@ import json
 import os
 
 
-def write_to_file():
+def create_missing_songs_dict():
+    '''
+    Creates a dictionary of songs and titles that are missing from the YouTube playlist.
+    Assumes that both playlists are in the same order and have the same songs. Used for testing purposes.
+    Returns:
+    dict: The dictionary of missing songs and titles
+    int: The count of the current missing songs and titles dictionary
+    '''
     youtube = youtube_api.get_authenticated_service()
     tracks = spotify_api.spotify_track_lister()
     playlist_id = spotify_api.youtube_playlist_id
-    filename = "song_log.json"
     existing_video_ids = youtube_api.yt_music_vid_ids(youtube, playlist_id)
 
-    processed_songs = [re.sub(r"[.,!?\-_/ ()'\"]", "", song[0]).lower() for song in tracks]
-    processed_keys = [re.sub(r"[.,!?\-_/ ()'\"]", "", key).lower() for key in existing_video_ids.keys()]
+    processed_songs = [youtube_api.normalize_title(track[0]) for track in tracks]
+    processed_keys_list = []
 
-    # Load existing data
-    if os.path.exists(filename):
+    # Create a list of processed keys from the existing_video_ids dictionary removing duplicates
+    for key in existing_video_ids.keys():
+        processed_key = youtube_api.normalize_title(key)
+        if processed_key not in processed_keys_list:
+            processed_keys_list.append(processed_key)
+
+    # Create a dictionary of missing songs and titles
+    song_not_in_title_dict = {}
+    for index, song in enumerate(processed_songs):
+        if song not in processed_keys_list:
+            try:
+                song_not_in_title_dict[song] = processed_keys_list[index]
+            except IndexError:
+                pass
+
+    return song_not_in_title_dict
+
+
+def write_to_file(song_not_in_title_dict):
+    '''
+    Writes the missing songs and titles to a JSON file.
+    The file is named "song_log.json" and is written to the current working directory.
+    The file is updated with the missing songs and titles each time this function is called.
+
+    Args:
+    song_not_in_title_dict (dict): The dictionary of missing songs and titles
+
+    Returns:
+    int: The count of the current missing songs and titles dictionary in the JSON file
+    '''
+    filename = "song_log.json"
+
+    if os.path.exists(filename) and os.path.getsize(filename) > 0:
         with open(filename, 'r') as f:
             existing_data = json.load(f)
     else:
         existing_data = {}
 
-    # Get the current count
     count = existing_data.get('count', 0) + 1
 
-    # Update the data
     data = {
-        f"video_titles_{count}": processed_keys,
-        f"processed_songs_{count}": processed_songs,
+        f"missing_songs_and_titles_{count}": song_not_in_title_dict,
         "count": count
     }
 
-    # Merge with existing data
     existing_data.update(data)
 
-    # Write the updated data
     with open(filename, 'w') as f:
-        json.dump(existing_data, f)
+        json.dump(existing_data, f, indent=4)
 
     return count
 
 
 def print_songs_and_titles(count):
+    '''
+    Prints the songs and titles that are missing from the YouTube playlist.
+    The count parameter is used to access the correct dictionary in the JSON file.
+    
+    Args:
+    count (int): The count of the current missing songs and titles dictionary in the JSON file
+    '''
     filename = "song_log.json"
     with open(filename, 'r') as f:
         data = json.load(f)
     
-    video_titles = data[f"video_titles_{count}"]
-    processed_songs = data[f"processed_songs_{count}"]
-    
-    max_length = max(len(processed_songs), len(video_titles))
-    
-    for i in range(max_length):
-        song = processed_songs[i] if i < len(processed_songs) else "No song"
-        title = video_titles[i] if i < len(video_titles) else "No title"
+    missing_songs_and_titles = data.get(f"missing_songs_and_titles_{count}", {})
+    for song, title in missing_songs_and_titles.items():
         print(f"{song:<40} {title}")
 
 
 if __name__ == "__main__":
     try:
-        count = write_to_file()  # Write to file and returns the count
+        song_not_in_title_dict = create_missing_songs_dict()
+        count = write_to_file(song_not_in_title_dict)  # Write to file and returns the count
         print("Finished writing to file")
         print_songs_and_titles(count)
 
