@@ -96,7 +96,7 @@ def print_songs_and_titles(count):
         print(f"{song:<40} {title}")
 
 
-if __name__ == "__main__":
+def main():
     try:
         song_not_in_title_dict = create_missing_songs_dict()
         count = write_to_file(song_not_in_title_dict)  # Write to file and returns the count
@@ -108,3 +108,7 @@ if __name__ == "__main__":
             print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
         else:
             print(f"An error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()
