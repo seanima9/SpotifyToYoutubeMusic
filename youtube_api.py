@@ -26,7 +26,7 @@ def normalize_title(title):
     str: The normalized title
     '''
     keywords_pattern = r"\s*(feat\.?|fts\.?|ft\.?|featuring|with)\s*"
-    punctuation_pattern = r"[.,$&!?’|@:\-_/ ()'\"]"
+    punctuation_pattern = r"[.,$&!?’|@:\-_/()'\"]"  # Space removed
 
     step1 = re.sub(keywords_pattern, "", str(title), flags=re.IGNORECASE)
     step2 = re.sub(punctuation_pattern, "", step1, flags=re.IGNORECASE)
@@ -188,8 +188,7 @@ def song_adder(youtube):
 
     for song, artist in tracks:
         # Remove special characters and convert to lowercase
-        song_processed = normalize_title(song)
-        if any(song_processed in normalize_title(key) for key in existing_video_ids):
+        if any(normalize_title(song) in normalize_title(key) for key in existing_video_ids):
             print(f"{song}  is already in the playlist.")
             continue  # Move on to next song
         

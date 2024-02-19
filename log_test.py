@@ -30,9 +30,9 @@ def create_missing_songs_dict():
     # Create a dictionary of missing songs and titles
     song_not_in_title_dict = {}
     for index, song in enumerate(processed_songs):
-        if song not in processed_keys_list:
+        if not any(song in key for key in processed_keys_list):  # If the song is not in a title
             try:
-                song_not_in_title_dict[song] = processed_keys_list[index]
+                song_not_in_title_dict[song] = processed_keys_list[index]  # Add the song and title to the dictionary
             except IndexError:
                 pass
 
@@ -51,7 +51,7 @@ def write_to_file(song_not_in_title_dict):
     Returns:
     int: The count of the current missing songs and titles dictionary in the JSON file
     '''
-    filename = "song_log.json"
+    filename = "/home/seanimani/personal_projs/playlist_conv/song_log.json"
 
     if os.path.exists(filename) and os.path.getsize(filename) > 0:
         with open(filename, 'r') as f:
@@ -82,7 +82,7 @@ def print_songs_and_titles(count):
     Args:
     count (int): The count of the current missing songs and titles dictionary in the JSON file
     '''
-    filename = "song_log.json"
+    filename = "/home/seanimani/personal_projs/playlist_conv/song_log.json"
     with open(filename, 'r') as f:
         data = json.load(f)
     
