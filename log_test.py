@@ -30,7 +30,12 @@ def create_missing_songs_dict():
     # Create a dictionary of missing songs and titles
     song_not_in_title_dict = {}
     for index, song in enumerate(processed_songs):
-        if not any(song in key for key in processed_keys_list):  # If the song is not in a title
+        song_words = song.split(" ")
+        score = 0.0
+        for word in song_words:  # for every word in your string
+            if any(word in key for key in processed_keys_list):  # if it is in your bigger string increase score
+                score += 1
+        if score / len(song_words) != 1.0:  # If not all words in the song are in a title
             try:
                 song_not_in_title_dict[song] = processed_keys_list[index]  # Add the song and title to the dictionary
             except IndexError:

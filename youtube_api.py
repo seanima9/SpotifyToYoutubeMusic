@@ -26,7 +26,7 @@ def normalize_title(title):
     str: The normalized title
     '''
     keywords_pattern = r"\s*(feat\.?|fts\.?|ft\.?|featuring|with)\s*"
-    punctuation_pattern = r"[.,$&!?’|@:\-_/()'\"]"  # Space removed
+    punctuation_pattern = r"[.,$&!?’|@:\-_/()'\[\]{}\"]"  # Space removed
 
     step1 = re.sub(keywords_pattern, "", str(title), flags=re.IGNORECASE)
     step2 = re.sub(punctuation_pattern, "", step1, flags=re.IGNORECASE)
@@ -183,12 +183,18 @@ def song_adder(youtube):
     playlist_id = spotify_api.youtube_playlist_id  # The ID of the YouTube playlist
     tracks = spotify_api.spotify_track_lister()  # tracks is a list of tuples containing the track name and a list of artists
     possible_tries = 3
+
     # A dictionary mapping song and artist pairs to video IDs in the youtube music playlist currently
     existing_video_ids = yt_music_vid_ids(youtube, playlist_id)  # 1 unit per 50 videos
+    processed_keys_list = [normalize_title(key) for key in existing_video_ids]
 
     for song, artist in tracks:
-        # Remove special characters and convert to lowercase
-        if any(normalize_title(song) in normalize_title(key) for key in existing_video_ids):
+        song_words = normalize_title(song).split(" ")
+        score = 0.0
+        for word in song_words:
+            if any(word in key for key in processed_keys_list):  # if it is in your bigger string increase score
+                score += 1
+        if score / len(song_words) == 1.0:  # If not all words in the song are in a title
             print(f"{song}  is already in the playlist.")
             continue  # Move on to next song
         
