@@ -2,6 +2,14 @@
 
 This project synchronizes tracks from a Spotify playlist to a YouTube playlist, automatically adding new tracks from Spotify to YouTube without duplicating existing ones. It's built using Python and utilizes the Spotify Web API and YouTube Data API v3 for playlist management.
 
+## Documentation
+
+Find more detailed documentation on the scripts here
+
+youtube_api.py: https://planet-perch-311.notion.site/Documentation-for-youtube_api-py-2c76778c560c42c7b2542b62349d8669?pvs=4
+
+spotify_api.py: https://planet-perch-311.notion.site/Documentation-for-spotify_api-py-2fc9c85480a0432b8da5b32b7db2288c
+
 ## Getting Started
 
 These instructions will guide you through setting up and running the project on your local machine.
