@@ -19,6 +19,13 @@ youtube_playlist_id = playlist_ids[1].strip()
 def get_access_token(client_id, client_secret):
     '''
     Obtain an access token for authenticating requests to the Spotify API.
+
+    Args:
+    client_id (str): The client ID for your Spotify API app.
+    client_secret (str): The client secret for your Spotify API app.
+
+    Returns:
+    str: The access token for authenticating requests to the Spotify API.
     '''
     auth_url = 'https://accounts.spotify.com/api/token'
     response = requests.post(auth_url, {
@@ -37,6 +44,13 @@ def get_access_token(client_id, client_secret):
 def get_playlist_tracks(playlist_id, access_token):
     '''
     Get the tracks from a Spotify playlist and return a list of dictionaries containing the track information.
+
+    Args:
+    playlist_id (str): The ID of the Spotify playlist.
+    access_token (str): The access token for authenticating requests to the Spotify API.
+
+    Returns:
+    list: The list of dictionaries containing the track information.
     '''
     url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
     tracks = []
@@ -59,6 +73,9 @@ def get_playlist_tracks(playlist_id, access_token):
 def spotify_track_lister():
     '''
     Get the tracks from a Spotify playlist and return a list of tuples containing the track name and a list of artists.
+
+    Returns:
+    list: The list of tuples containing the track name and a list of artists.
     '''
     my_playlist_id = spotify_playlist_id
     

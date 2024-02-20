@@ -9,9 +9,9 @@ def create_missing_songs_dict():
     '''
     Creates a dictionary of songs and titles that are missing from the YouTube playlist.
     Assumes that both playlists are in the same order and have the same songs. Used for testing purposes.
+
     Returns:
     dict: The dictionary of missing songs and titles
-    int: The count of the current missing songs and titles dictionary
     '''
     youtube = youtube_api.get_authenticated_service()
     tracks = spotify_api.spotify_track_lister()
@@ -86,6 +86,9 @@ def print_songs_and_titles(count):
     
     Args:
     count (int): The count of the current missing songs and titles dictionary in the JSON file
+
+    Returns:
+    None
     '''
     filename = "/home/seanimani/personal_projs/playlist_conv/song_log.json"
     with open(filename, 'r') as f:
