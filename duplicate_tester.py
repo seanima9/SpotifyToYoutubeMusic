@@ -16,7 +16,7 @@ def create_missing_songs_dict():
     youtube = youtube_api.get_authenticated_service()
     tracks = spotify_api.spotify_track_lister()
     playlist_id = spotify_api.youtube_playlist_id
-    existing_video_ids = youtube_api.yt_music_vid_ids(youtube, playlist_id)
+    existing_video_ids = youtube_api.yt_music_vid_ids(youtube, playlist_id)[0]
 
     processed_songs = [youtube_api.normalize_title(track[0]) for track in tracks]
     processed_keys_list = []

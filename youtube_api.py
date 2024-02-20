@@ -123,8 +123,7 @@ def add_song_to_playlist(youtube, playlist_id, video_id):
 
 def yt_music_vid_ids(youtube, playlist_id):
     """
-    Fetch all video IDs in a given YouTube playlist and return a dictionary mapping song and artist pairs to video IDs
-    e.g. {'song - artist': '2SUwOgmvzK4', ...}
+    Fetches a dictionary of video titles and their corresponding video IDs in the youtube music playlist currently
     costs 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
     we are assuming video titles have the song and artist in them
 
@@ -148,17 +147,47 @@ def yt_music_vid_ids(youtube, playlist_id):
         )
         response = request.execute()
         # response is a dictionary looking like {'nextPageToken': '...', 'items': [{'snippet': {'resourceId': {'videoId': '...'}}}, ...]}
-
+        video_id_list = []
         for item in response.get('items', []):  # returns value of 'items' key if it exists, else returns an empty list
             video_title = item['snippet']['title']  # Will give the youtube video title
             video_id = item['snippet']['resourceId']['videoId']
+            video_id_list.append(video_id)
             existing_video_ids[video_title] = video_id 
         next_page_token = response.get('nextPageToken')  
 
         if not next_page_token:  # If there are no more pages
             break
 
-    return existing_video_ids
+    return existing_video_ids, video_id_list
+
+def remove_duplicates(youtube, playlist_id):
+    '''
+    Removes duplicate songs from a YouTube playlist, costs 50 units per removal
+
+    Args:
+    youtube (Resource): The authenticated YouTube API client
+    playlist_id (str): The ID of the YouTube playlist
+
+    Returns:
+    None
+    '''
+    video_id_list = yt_music_vid_ids(youtube, playlist_id)[1]  # 1 unit per 50 videos
+
+    video_id_counts = {}  # video_id_counts: {video_id: count}
+    for video_id in video_id_list:
+        if video_id in video_id_counts:
+            video_id_counts[video_id] += 1
+        else:
+            video_id_counts[video_id] = 1
+
+    for video_id, count in video_id_counts.items():
+        if count > 1:
+            for _ in range(count - 1):
+                youtube.playlistItems().delete(id=video_id).execute() # 50 units per request
+    print("Duplicates removed.")
+
+    return
+
 
 
 def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
@@ -169,6 +198,11 @@ def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
     youtube (Resource): The authenticated YouTube API client
     playlist_id (str): The ID of the YouTube playlist
     video_id (str): The ID of the YouTube video
+    song (str): The name of the song
+    artist (str): The artist of the song
+
+    Returns:
+    None
     '''
     for attempt in range(possible_tries):
             try:
@@ -204,8 +238,11 @@ def song_adder(youtube, playlist_id, tracks):
     youtube (Resource): The authenticated YouTube API client
     playlist_id (str): The ID of the YouTube playlist
     tracks (list): A list of tuples containing song and artist pairs
+
+    Returns:
+    None
     '''
-    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)  # 1 unit per 50 videos
+    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)[0]  # 1 unit per 50 videos
     processed_keys_list = [normalize_title(key) for key in existing_video_ids]
 
     for song, artist in tracks:
@@ -237,6 +274,12 @@ def main():
     print("Authentication successful.")
     print('-' * 50 + "\n")
 
+    choice = input("Do you want to 1: remove duplicates from the playlist or \
+                    2: add songs to the playlist from spotify? respond 1 / 2: ")
+    
+    if choice == '1':
+        remove_duplicates(youtube, spotify_api.youtube_playlist_id)
+        return
     try:
         song_adder(youtube, spotify_api.youtube_playlist_id, spotify_api.spotify_track_lister())
 
