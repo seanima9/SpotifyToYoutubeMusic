@@ -7,3 +7,4 @@ personal_projs/
 client_secret.json
 token.pickle
 song_log.json
+*.log

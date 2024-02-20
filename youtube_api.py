@@ -7,16 +7,20 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import spotify_api
+import logging
 
-# Load environment variables
+script_dir = spotify_api.script_dir
+log_file = os.path.join(script_dir, 'youtube_api.log')
+logging.basicConfig(level=logging.INFO, filename = log_file, filemode= 'w',
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 load_dotenv()
 client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
 
 
 def normalize_title(title):
     '''
-    Normalizes the title by removing keywords and punctuation.
-    The title is converted to lowercase and returned.
+    Normalizes the title by removing keywords and punctuation, then returning the title in lowercase.
 
     Args:
     title (str): The title to be normalized
@@ -73,7 +77,7 @@ def get_authenticated_service():
             print()
             print("Saved credentials to token.pickle")
 
-    return build('youtube', 'v3', credentials=creds)
+    return build('youtube', 'v3', credentials=creds, cache_discovery=False)
 
 
 def search_song(youtube, song_name, artist):
@@ -121,9 +125,9 @@ def add_song_to_playlist(youtube, playlist_id, video_id):
     ).execute()
 
 
-def yt_music_vid_ids(youtube, playlist_id):
+def fetch_yt_playlist_contents(youtube, playlist_id):
     """
-    Fetches a dictionary of video titles and their corresponding video IDs in the youtube music playlist currently
+    Fetches the contents of a YouTube playlist, the video IDs and the playlist item IDs
     costs 1 unit per page, so with maxResults=50, it costs 1 unit per 50 videos
     we are assuming video titles have the song and artist in them
 
@@ -133,8 +137,10 @@ def yt_music_vid_ids(youtube, playlist_id):
 
     Returns:
     dict: A dictionary mapping song and artist pairs to video IDs in the youtube music playlist currently
+    dict: A dictionary mapping video IDs to playlist item IDs
     """
     existing_video_ids = {}
+    video_to_playlist_item_ids = {}
     next_page_token = None
 
     while True:
@@ -143,22 +149,29 @@ def yt_music_vid_ids(youtube, playlist_id):
             playlistId=playlist_id,
             maxResults=50,  # Maximum number of results to return per page, can be between 1 and 50, cost is 1 unit per page
             pageToken=next_page_token,  
-            fields="nextPageToken,items(snippet/title,snippet/resourceId/videoId)"
+            fields="nextPageToken,items(id,snippet/title,snippet/resourceId/videoId)"
         )
         response = request.execute()
         # response is a dictionary looking like {'nextPageToken': '...', 'items': [{'snippet': {'resourceId': {'videoId': '...'}}}, ...]}
-        video_id_list = []
+
         for item in response.get('items', []):  # returns value of 'items' key if it exists, else returns an empty list
             video_title = item['snippet']['title']  # Will give the youtube video title
             video_id = item['snippet']['resourceId']['videoId']
-            video_id_list.append(video_id)
+            playlist_item_id = item['id']
+
+            if video_id not in video_to_playlist_item_ids:
+                video_to_playlist_item_ids[video_id] = [playlist_item_id]
+            else:
+                video_to_playlist_item_ids[video_id].append(playlist_item_id)
+
             existing_video_ids[video_title] = video_id 
         next_page_token = response.get('nextPageToken')  
 
         if not next_page_token:  # If there are no more pages
             break
 
-    return existing_video_ids, video_id_list
+    return existing_video_ids, video_to_playlist_item_ids
+
 
 def remove_duplicates(youtube, playlist_id):
     '''
@@ -171,23 +184,17 @@ def remove_duplicates(youtube, playlist_id):
     Returns:
     None
     '''
-    video_id_list = yt_music_vid_ids(youtube, playlist_id)[1]  # 1 unit per 50 videos
-
-    video_id_counts = {}  # video_id_counts: {video_id: count}
-    for video_id in video_id_list:
-        if video_id in video_id_counts:
-            video_id_counts[video_id] += 1
-        else:
-            video_id_counts[video_id] = 1
-
-    for video_id, count in video_id_counts.items():
-        if count > 1:
-            for _ in range(count - 1):
-                youtube.playlistItems().delete(id=video_id).execute() # 50 units per request
-    print("Duplicates removed.")
-
+    video_to_playlist_item_ids = fetch_yt_playlist_contents(youtube, playlist_id)[1]  # 1 unit per 50 videos
+    count_removed = 0
+    for video_id, playlist_item_id in video_to_playlist_item_ids.items():
+        if len(playlist_item_id) > 1:
+            for item_id in playlist_item_id[1:]:
+                youtube.playlistItems().delete(id=item_id).execute() # 50 units per request
+                count_removed += 1
+                logging.info(f"Removed duplicate song with video ID {video_id} from the playlist.")
+    print("Duplicates removed. Total removed: ", count_removed)
+    logging.info(f"Total removed: {count_removed}")
     return
-
 
 
 def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
@@ -207,17 +214,18 @@ def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
     for attempt in range(possible_tries):
             try:
                 add_song_to_playlist(youtube, playlist_id, video_id)  # 50 units per request
+                logging.info(f"Added {song} by {artist} to the playlist.")
                 print(f"Added {song} by {artist} to the playlist.")
                 break
 
             except Exception as e:
                 if 'quota' in str(e):
-                    print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
                     return
                 else:
                     print(f"Failed to add {song} by {artist} to the playlist. On attempt {attempt + 1} of {possible_tries}")
                     print('-' * 50)
                     print(f"Error message: {e}")
+                    logging.error(f"Failed to add {song} by {artist} to the playlist. On attempt {attempt + 1} of {possible_tries}")
                     print('-' * 50)
 
                     if attempt < possible_tries - 1:
@@ -242,31 +250,50 @@ def song_adder(youtube, playlist_id, tracks):
     Returns:
     None
     '''
-    existing_video_ids = yt_music_vid_ids(youtube, playlist_id)[0]  # 1 unit per 50 videos
+    existing_video_ids = fetch_yt_playlist_contents(youtube, playlist_id)[0]  # 1 unit per 50 videos
     processed_keys_list = [normalize_title(key) for key in existing_video_ids]
+    count = 0
+    chosen_count = None
+    MAX_RETRIES = 3
+
+    while not chosen_count:
+        chosen_count = input("How many songs do you want to add to the playlist? (Beware of quota limits): ")
+        if chosen_count.isdigit():
+            chosen_count = int(chosen_count)
+        else:
+            print("Please enter a valid number.")
+            chosen_count = None
 
     for song, artist in tracks:
+        if count == chosen_count:
+            break
+
         song_words = normalize_title(song).split(" ")
         score = 0.0
         for word in song_words:
             if any(word in key for key in processed_keys_list):
                 score += 1
         if score / len(song_words) == 1.0:
-            print(f"{song}  is already in the playlist.")
+            logging.info(f"{song}  is already in the playlist.")
             continue
         
         video_id = search_song(youtube, song, artist)  # 100 units per request
         if not video_id:
             print(f"Could not find YouTube video for {song} by {artist}")
+            logging.error(f"Could not find YouTube video for {song} by {artist}")
             continue
-        
-        attempter(3, youtube, playlist_id, video_id, song, artist)
+
+        count += 1
+        attempter(MAX_RETRIES, youtube, playlist_id, video_id, song, artist)
+
+    print(f"Added {count} songs to the playlist.")
 
 
 def main():
     try:
         youtube = get_authenticated_service()
     except Exception as e:
+        logging.error(f"An error occurred during authentication: {e}")
         print(f"An error occurred during authentication: {e}")
         return
     
@@ -274,20 +301,30 @@ def main():
     print("Authentication successful.")
     print('-' * 50 + "\n")
 
-    choice = input("Do you want to 1: remove duplicates from the playlist or \
-                    2: add songs to the playlist from spotify? respond 1 / 2: ")
+    choice = input("Do you want to \n"
+                   "1: remove duplicates from the playlist? Or \n"
+                   "2: add songs to the playlist from spotify? \n"
+                   "Enter 1 or 2, or any other key to exit: ")
     
-    if choice == '1':
-        remove_duplicates(youtube, spotify_api.youtube_playlist_id)
-        return
     try:
-        song_adder(youtube, spotify_api.youtube_playlist_id, spotify_api.spotify_track_lister())
+        if choice == '1':
+            print("Removing duplicates from the playlist...")
+            remove_duplicates(youtube, spotify_api.youtube_playlist_id)
+
+        if choice == '2':
+            print("\nLoading...\n")
+            song_adder(youtube, spotify_api.youtube_playlist_id, spotify_api.spotify_track_lister())
 
     except Exception as e:
+
         if 'quota' in str(e):
             print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
         else:
             print(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
+
+    print("\nClosing program. Bye!")
+    return
 
 
 if __name__ == '__main__':
