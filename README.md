@@ -14,13 +14,13 @@ spotify_api.py: https://planet-perch-311.notion.site/Documentation-for-spotify_a
 
 These instructions will guide you through setting up and running the project on your local machine.
 
-## Prerequisites
+### Prerequisites
 
 Python 3.6 or higher
 pip for installing dependencies
 A Spotify Developer account and a Google Developer account for API access
 
-## Installation
+### Installation
 
 Clone the repository
 
