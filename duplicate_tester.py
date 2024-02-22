@@ -1,6 +1,5 @@
 import youtube_api
 import spotify_api
-import re
 import json
 import os
 
@@ -13,9 +12,10 @@ def create_missing_songs_dict():
     Returns:
     dict: The dictionary of missing songs and titles
     '''
+    spotify_playlist_id, youtube_playlist_id = spotify_api.update_playlist_ids()
     youtube = youtube_api.get_authenticated_service()
-    tracks = spotify_api.spotify_track_lister()
-    playlist_id = spotify_api.youtube_playlist_id
+    tracks = spotify_api.spotify_track_lister(spotify_playlist_id)
+    playlist_id = youtube_playlist_id
     existing_video_ids = youtube_api.fetch_yt_playlist_contents(youtube, playlist_id)[0]
 
     processed_songs = [youtube_api.normalize_title(track[0]) for track in tracks]

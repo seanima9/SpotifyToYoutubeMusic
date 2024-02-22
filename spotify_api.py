@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 import requests
-
+import re
 
 # Load environment variables
 load_dotenv()
@@ -10,11 +10,108 @@ client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 
 script_dir = os.path.dirname(__file__)
 full_file_path = os.path.join(script_dir, 'playlist_ids.txt')
-with open(full_file_path, 'r') as file:
-    playlist_ids = file.readlines()
 
-spotify_playlist_id = playlist_ids[0].strip()
-youtube_playlist_id = playlist_ids[1].strip()
+
+##################### Getting Playlist IDs #####################
+
+
+def get_playlist_url(service_name):
+    while True:
+        url = input(f"Enter {service_name} playlist URL: ")
+        playlist_id = extract_playlist_id(url)
+        if playlist_id is not None:
+            global songs_list_wipe
+            songs_list_wipe = True
+            print(f"Successfully extracted {playlist_id} for {service_name} \n")
+            return playlist_id
+
+        print(f"Invalid {service_name} playlist URL. Please try again. \n")
+
+        
+def extract_playlist_id(url):
+    '''
+    Extract the playlist ID from a Spotify or YouTube playlist URL.
+    
+    Args:
+    url (str): The URL of the Spotify or YouTube playlist.
+    
+    Returns:
+    str: The ID of the Spotify or YouTube playlist.
+    '''
+    yt_pattern = re.compile(r"music\.youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)")
+    spot_pattern = re.compile(r"open\.spotify\.com/playlist/([a-zA-Z0-9]+)")
+
+    yt_match = yt_pattern.search(url)
+    if yt_match:
+        return yt_match.group(1)
+    
+    spot_match = spot_pattern.search(url)
+    if spot_match:
+        return spot_match.group(1)
+    
+    # If the URL is not a Spotify or YouTube playlist URL
+    return 
+
+
+def update_playlist_ids():
+    '''
+    Check for id prescence in playlist_ids.txt and ask for new ids if not present.
+    Also ask if they want to update it regardless.
+    
+    Returns:
+    None
+    '''
+    global songs_list_wipe
+    songs_list_wipe = False
+    response = '0'
+    try:
+        with open(full_file_path, 'r') as f:
+            lines = f.readlines()
+            spotify_id = lines[0].strip()
+            youtube_id = lines[1].strip()
+
+    except (FileNotFoundError, IndexError):
+        print("\nMissing IDs in playlist_ids.txt \n")
+        spotify_id = get_playlist_url("Spotify")
+        youtube_id = get_playlist_url("YouTube")
+        response = '1'
+
+    while True:
+        response = input(str("\n1. Keep using the current Spotify and YouTube playlists\n"
+                         "2. Update the Spotify and YouTube playlists\n"
+                         "3. Update the Spotify playlist\n"
+                         "4. Update the YouTube playlist\n: "))
+        
+        if response == '1':
+            break
+        elif response == '2':
+            spotify_id = get_playlist_url("Spotify")
+            youtube_id = get_playlist_url("YouTube")
+            break
+        elif response == '3':
+            spotify_id = get_playlist_url("Spotify")
+            break
+        elif response == '4':
+            youtube_id = get_playlist_url("YouTube")
+            break
+        else:
+            print("Invalid response. Please enter '1', '2', '3', or '4'.")
+
+    with open(full_file_path, 'w') as f:
+        f.write(spotify_id + '\n')
+        f.write(youtube_id + '\n')
+    
+    if songs_list_wipe:
+        try:
+            os.remove(os.path.join(script_dir, 'songs_added_list.json'))
+        except FileNotFoundError:
+            pass
+
+    return spotify_id, youtube_id
+
+
+##################### Interacting with the Spotify API #####################
+
 
 def get_access_token(client_id, client_secret):
     '''
@@ -70,14 +167,13 @@ def get_playlist_tracks(playlist_id, access_token):
     return tracks
 
 
-def spotify_track_lister():
+def spotify_track_lister(my_playlist_id):
     '''
     Get the tracks from a Spotify playlist and return a list of tuples containing the track name and a list of artists.
 
     Returns:
     list: The list of tuples containing the track name and a list of artists.
     '''
-    my_playlist_id = spotify_playlist_id
     
     access_token = get_access_token(client_id, client_secret)
     tracks = get_playlist_tracks(my_playlist_id, access_token)
@@ -92,4 +188,5 @@ def spotify_track_lister():
 
 
 if __name__ == '__main__':
-    spotify_track_lister()
+    spotify_playlist_id, youtube_playlist_id = update_playlist_ids()
+    spotify_track_lister(spotify_playlist_id)

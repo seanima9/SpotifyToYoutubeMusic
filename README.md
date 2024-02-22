@@ -51,14 +51,10 @@ YOUTUBE_CLIENT_SECRETS=path/to/your/downloaded/client_secret.json
 
 ## Usage
 
-### Set Spotify Playlist ID and YouTube Playlist ID:
-
-Add them to playlist_ids.txt, adding spotify id to line one and youtube music id to line 2
 
 Run the Application:
 
 Activate your venv, then run the program with 'python youtube_api.py'.
-Make sure you are in the right dir when doing this
 Follow the on-screen instructions to authenticate with YouTube on your first run.
 
 Be aware of the API quota limits set by Google and Spotify.

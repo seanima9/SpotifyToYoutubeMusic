@@ -8,6 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import spotify_api
 import logging
+import json
 
 script_dir = spotify_api.script_dir
 log_file = os.path.join(script_dir, 'youtube_api.log')
@@ -16,6 +17,9 @@ logging.basicConfig(level=logging.INFO, filename = log_file, filemode= 'w',
 
 load_dotenv()
 client_secrets_json = os.getenv('YOUTUBE_CLIENT_SECRETS')
+
+
+########################## HELPER FUNCTIONS ##########################
 
 
 def normalize_title(title):
@@ -176,6 +180,9 @@ def fetch_yt_playlist_contents(youtube, playlist_id):
     return existing_video_ids, video_to_playlist_item_ids
 
 
+########################## MAIN FUNCTIONS ##########################
+
+
 def remove_duplicates(youtube, playlist_id):
     '''
     Removes duplicate songs from a YouTube playlist, costs 50 units per removal
@@ -200,7 +207,7 @@ def remove_duplicates(youtube, playlist_id):
     return
 
 
-def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
+def attempter(possible_tries, youtube, playlist_id, video_id, song, artist, songs_added_list):
     '''
     Retry adding a song to a YouTube playlist if it fails, costs 50 units
     
@@ -219,6 +226,7 @@ def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
                 add_song_to_playlist(youtube, playlist_id, video_id)  # 50 units per request
                 logging.info(f"Added {song} by {artist} to the playlist.")
                 print(f"Added {song} by {artist} to the playlist.")
+                songs_added_list.append((song, artist))
                 break
 
             except Exception as e:
@@ -244,6 +252,8 @@ def attempter(possible_tries, youtube, playlist_id, video_id, song, artist):
 def song_adder(youtube, playlist_id, tracks):
     '''
     Add songs to a YouTube playlist if they are not already in the playlist, costs 100 units per song
+    Adds songs added to a list to prevent re-adding them upon re-running the program
+    Works in tandem with song in playlist checker so first run may add duplicates second run will not
 
     Args:
     youtube (Resource): The authenticated YouTube API client
@@ -267,9 +277,17 @@ def song_adder(youtube, playlist_id, tracks):
             print("Please enter a valid number.")
             chosen_count = None
 
+    try:
+        with open('songs_added_list.json', 'r') as f:
+            songs_added_list = json.load(f)
+    except FileNotFoundError:
+        songs_added_list = []
+
     for song, artist in tracks:
         if count == chosen_count:
             break
+        if (song, artist) in songs_added_list:
+            continue
 
         song_words = normalize_title(song).split(" ")
         score = 0.0
@@ -287,12 +305,19 @@ def song_adder(youtube, playlist_id, tracks):
             continue
 
         count += 1
-        attempter(MAX_RETRIES, youtube, playlist_id, video_id, song, artist)
+        attempter(MAX_RETRIES, youtube, playlist_id, video_id, song, artist, songs_added_list)
+
+    songs_add_list_path = os.path.join(spotify_api.script_dir, 'songs_added_list.json')
+    with open(songs_add_list_path, 'w') as f:
+        json.dump(songs_added_list, f)
 
     print(f"Added {count} songs to the playlist.")
 
 
 def main():
+    '''
+    Tries authentication, then gets playlist IDs and asks user what they want to do
+    '''
     try:
         youtube = get_authenticated_service()
     except Exception as e:
@@ -304,27 +329,30 @@ def main():
     print("Authentication successful.")
     print('-' * 50 + "\n")
 
-    choice = input("Do you want to \n"
+    # Get playlist IDs
+    spotify_playlist_id, youtube_playlist_id = spotify_api.update_playlist_ids()
+
+    choice = input("\nDo you want to \n"
                    "1: remove duplicates from the playlist? Or \n"
                    "2: add songs to the playlist from spotify? \n"
-                   "Enter 1 or 2, or any other key to exit: ")
+                   "Enter 1 or 2, or any other key to exit\n: ")
     
     try:
         if choice == '1':
             print("Removing duplicates from the playlist...")
-            remove_duplicates(youtube, spotify_api.youtube_playlist_id)
+            remove_duplicates(youtube, youtube_playlist_id)
 
         if choice == '2':
             print("\nLoading...\n")
-            song_adder(youtube, spotify_api.youtube_playlist_id, spotify_api.spotify_track_lister())
+            song_adder(youtube, youtube_playlist_id, spotify_api.spotify_track_lister(spotify_playlist_id))
 
     except Exception as e:
-
         if 'quota' in str(e):
             print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
         else:
             print(f"An error occurred: {e}")
             logging.error(f"An error occurred: {e}")
+            print("\nIf the problem persists, perhaps your playist ID is incorrect. Please check and try again.")
 
     print("\nClosing program. Bye!")
     return

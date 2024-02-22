@@ -4,7 +4,6 @@ personal_projs/
 .DS_Store
 .vscode/
 .env
-client_secret.json
 token.pickle
-song_log.json
 *.log
+*json
