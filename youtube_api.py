@@ -62,9 +62,12 @@ def get_authenticated_service():
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())  # Refresh the token, no need to ask for permission again
+            try:
+                creds.refresh(Request())  # Refresh the token, no need to ask for permission again
+            except Exception as e:
+                creds = None
 
-        else:
+        if not creds:
             flow = InstalledAppFlow.from_client_secrets_file(client_secrets_json, scopes)
             print('\n' +'-' * 50 )
             print("Starting local server for authentication...")
