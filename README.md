@@ -62,3 +62,7 @@ Before you begin, ensure you have the following installed:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or create issues for bugs, questions, or new features.
+
+For detailed information on this project please refer to our documentation:
+- [youtube_api.py Documentation](https://planet-perch-311.notion.site/Documentation-for-youtube_api-py-2c76778c560c42c7b2542b62349d8669?pvs=4)
+- [spotify_api.py Documentation](https://planet-perch-311.notion.site/Documentation-for-spotify_api-py-2fc9c85480a0432b8da5b32b7db2288c)
