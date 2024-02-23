@@ -277,8 +277,9 @@ def song_adder(youtube, playlist_id, tracks):
             print("Please enter a valid number.")
             chosen_count = None
 
+    songs_add_list_path = os.path.join(spotify_api.script_dir, 'songs_added_list.json')
     try:
-        with open('songs_added_list.json', 'r') as f:
+        with open(songs_add_list_path, 'r') as f:
             songs_added_list = json.load(f)
     except FileNotFoundError:
         songs_added_list = []
@@ -286,7 +287,7 @@ def song_adder(youtube, playlist_id, tracks):
     for song, artist in tracks:
         if count == chosen_count:
             break
-        if (song, artist) in songs_added_list:
+        if [song, artist] in songs_added_list:
             continue
 
         song_words = normalize_title(song).split(" ")
@@ -307,7 +308,6 @@ def song_adder(youtube, playlist_id, tracks):
         count += 1
         attempter(MAX_RETRIES, youtube, playlist_id, video_id, song, artist, songs_added_list)
 
-    songs_add_list_path = os.path.join(spotify_api.script_dir, 'songs_added_list.json')
     with open(songs_add_list_path, 'w') as f:
         json.dump(songs_added_list, f)
 
