@@ -332,27 +332,29 @@ def main():
     # Get playlist IDs
     spotify_playlist_id, youtube_playlist_id = spotify_api.update_playlist_ids()
 
-    choice = input("\nDo you want to \n"
-                   "1: remove duplicates from the playlist? Or \n"
-                   "2: add songs to the playlist from spotify? \n"
-                   "Enter 1 or 2, or any other key to exit\n: ")
-    
-    try:
-        if choice == '1':
-            print("Removing duplicates from the playlist...")
-            remove_duplicates(youtube, youtube_playlist_id)
+    choice = '1'
+    while choice in ['1', '2']:
+        choice = input("\nDo you want to \n"
+                    "1: remove duplicates from the playlist? Or \n"
+                    "2: add songs to the playlist from spotify? \n"
+                    "Enter 1 or 2, or any other key to exit\n: ")
+        
+        try:
+            if choice == '1':
+                print("Removing duplicates from the playlist...")
+                remove_duplicates(youtube, youtube_playlist_id)
 
-        if choice == '2':
-            print("\nLoading...\n")
-            song_adder(youtube, youtube_playlist_id, spotify_api.spotify_track_lister(spotify_playlist_id))
+            if choice == '2':
+                print("\nLoading...\n")
+                song_adder(youtube, youtube_playlist_id, spotify_api.spotify_track_lister(spotify_playlist_id))
 
-    except Exception as e:
-        if 'quota' in str(e):
-            print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
-        else:
-            print(f"An error occurred: {e}")
-            logging.error(f"An error occurred: {e}")
-            print("\nIf the problem persists, perhaps your playist ID is incorrect. Please check and try again.")
+        except Exception as e:
+            if 'quota' in str(e):
+                print("Quota exceeded. Please try again at 8AM GMT tomorrow.")
+            else:
+                print(f"An error occurred: {e}")
+                logging.error(f"An error occurred: {e}")
+                print("\nIf the problem persists, perhaps your playist ID is incorrect. Please check and try again.")
 
     print("\nClosing program. Bye!")
     return
