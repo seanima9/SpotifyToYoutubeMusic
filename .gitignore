@@ -1,10 +1,5 @@
-personal_projs/
-.ipynb_checkpoints/
+data/*
+logs/*
+__pychache__/*
 *.pyc
-.DS_Store
-.vscode/
 .env
-token.pickle
-*.log
-*json
-playlist_ids.txt

@@ -1,7 +1,17 @@
-import youtube_api
-import spotify_api
 import json
 import os
+import sys
+
+script_dir = os.path.dirname(__file__)
+sys.path.append(f'{script_dir}/..')
+if not os.path.exists(os.path.join(script_dir, '../data')):
+    os.makedirs(os.path.join(script_dir, '../data'))
+test_file = os.path.join(script_dir, '../logs/song_log.json')
+
+from auth.youtube_auth import get_authenticated_service
+from utils.playlist_utils import normalize_title, update_playlist_ids
+from utils.youtube_utils import fetch_yt_playlist_contents
+from services.spotify_services import spotify_track_lister
 
 
 def create_missing_songs_dict():
@@ -12,18 +22,18 @@ def create_missing_songs_dict():
     Returns:
     dict: The dictionary of missing songs and titles
     '''
-    spotify_playlist_id, youtube_playlist_id = spotify_api.update_playlist_ids()
-    youtube = youtube_api.get_authenticated_service()
-    tracks = spotify_api.spotify_track_lister(spotify_playlist_id)
+    spotify_playlist_id, youtube_playlist_id = update_playlist_ids()
+    youtube = get_authenticated_service()
+    tracks = spotify_track_lister(spotify_playlist_id)
     playlist_id = youtube_playlist_id
-    existing_video_ids = youtube_api.fetch_yt_playlist_contents(youtube, playlist_id)[0]
+    existing_video_ids = fetch_yt_playlist_contents(youtube, playlist_id)[0]
 
-    processed_songs = [youtube_api.normalize_title(track[0]) for track in tracks]
+    processed_songs = [normalize_title(track[0]) for track in tracks]
     processed_keys_list = []
 
     # Create a list of processed keys from the existing_video_ids dictionary removing duplicates
     for key in existing_video_ids.keys():
-        processed_key = youtube_api.normalize_title(key)
+        processed_key = normalize_title(key)
         if processed_key not in processed_keys_list:
             processed_keys_list.append(processed_key)
 
@@ -56,10 +66,9 @@ def write_to_file(song_not_in_title_dict):
     Returns:
     int: The count of the current missing songs and titles dictionary in the JSON file
     '''
-    filename = "/home/seanimani/personal_projs/playlist_conv/song_log.json"
 
-    if os.path.exists(filename) and os.path.getsize(filename) > 0:
-        with open(filename, 'r') as f:
+    if os.path.exists(test_file) and os.path.getsize(test_file) > 0:
+        with open(test_file, 'r') as f:
             existing_data = json.load(f)
     else:
         existing_data = {}
@@ -73,7 +82,7 @@ def write_to_file(song_not_in_title_dict):
 
     existing_data.update(data)
 
-    with open(filename, 'w') as f:
+    with open(test_file, 'w') as f:
         json.dump(existing_data, f, indent=4)
 
     return count
@@ -90,8 +99,7 @@ def print_songs_and_titles(count):
     Returns:
     None
     '''
-    filename = "/home/seanimani/personal_projs/playlist_conv/song_log.json"
-    with open(filename, 'r') as f:
+    with open(test_file, 'r') as f:
         data = json.load(f)
     
     missing_songs_and_titles = data.get(f"missing_songs_and_titles_{count}", {})

@@ -46,7 +46,7 @@ Before you begin, ensure you have the following installed:
 
 1. Run the main script to start the program:
    ```bash
-   python youtube_api.py
+   python main.py
    ```
 2. Follow the on-screen prompts to authenticate and choose between removing duplicates from your YouTube playlist or adding songs from Spotify to YouTube.
 3. Add your playlist ids by following the prompts and copy and pasting your full URL when on each respective playlist
@@ -64,5 +64,4 @@ Before you begin, ensure you have the following installed:
 Contributions are welcome! Please feel free to submit pull requests or create issues for bugs, questions, or new features.
 
 For detailed information on this project please refer to our documentation:
-- [youtube_api.py Documentation](https://planet-perch-311.notion.site/Documentation-for-youtube_api-py-2c76778c560c42c7b2542b62349d8669?pvs=4)
-- [spotify_api.py Documentation](https://planet-perch-311.notion.site/Documentation-for-spotify_api-py-2fc9c85480a0432b8da5b32b7db2288c)
+- [In depth Documentation](https://planet-perch-311.notion.site/Documentation-for-Playlist-Sync-866b0abfdcd2421e8e9526c00e161c56?pvs=4)
